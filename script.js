@@ -12,9 +12,20 @@ const apiUrl = `https://api.nasa.gov/planetary/apod?api_key=${API_KEY}&count=${C
 let resultsArray = [];
 let favorites = {};
 
+function showContent(page) {
+    window.scrollTo({ top: 0, behavior: 'instant'});
+    if (page === 'results') {
+        resultsNav.classList.remove('hidden');
+        favoritesNav.classList.add('hidden');
+    } else {
+        resultsNav.classList.add('hidden');
+        favoritesNav.classList.remove('hidden');
+    }
+    loader.classList.add('hidden');
+}
+
 function createDOMNodes(page) {
     const currentArray = page === 'results' ? resultsArray : Object.values(favorites);
-    console.log('currentArray', page, currentArray);
     currentArray.forEach((result) => {
         // Card Container
         const card = document.createElement('div');
@@ -40,8 +51,14 @@ function createDOMNodes(page) {
         // Save Text
         const saveText = document.createElement('p');
         saveText.classList.add('clickable');
-        saveText.textContent = 'Add to Favorites';
-        saveText.setAttribute('onclick', `saveFavorite('${result.url}')`);
+        
+        if (page === 'results') {
+            saveText.textContent = 'Add to Favorites';
+            saveText.setAttribute('onclick', `saveFavorite('${result.url}')`);
+        } else {
+            saveText.textContent = 'Remove Favorite';
+            saveText.setAttribute('onclick', `removeFavorite('${result.url}')`);
+        }
         // Card Text
         const cardText = document.createElement('p');
         cardText.textContent = result.explanation;
@@ -68,30 +85,21 @@ function updateDOM(page) {
     // Get Favorites from localStorage
     if (localStorage.getItem('nasaFavorites')) {
         favorites = JSON.parse(localStorage.getItem('nasaFavorites'));
-        console.log('favorites from localSotrage', favorites);
     }
+    imagesContainer.textContent = '';
     createDOMNodes(page);
+    showContent(page);
 }
 
 // Get 10 Images from NASA API
 async function getNasaPictures() {
     try {
-        // const response = await fetch(apiUrl);
-        // resultsArray = await response.json();
-        resultsArray.push({
-            copyright: "Bray Falls",
-            date: "2021-05-14",
-            explanation: "A gorgeous spiral galaxy, M104 is famous for its nearly edge-on profile featuring a broad ring of obscuring dust lanes. Seen in silhouette against an extensive central bulge of stars, the swath of cosmic dust lends a broad brimmed hat-like appearance to the galaxy suggesting a more popular moniker, the Sombrero Galaxy. This sharp optical view of the well-known galaxy made from ground-based image data was processed to preserve details often lost in overwhelming glare of M104's bright central bulge. Also known as NGC 4594, the Sombrero galaxy can be seen across the spectrum, and is host to a central supermassive black hole. About 50,000 light-years across and 28 million light-years away, M104 is one of the largest galaxies at the southern edge of the Virgo Galaxy Cluster. Still the colorful spiky foreground stars in this field of view lie well within our own Milky Way galaxy.",
-            hdurl: "https://apod.nasa.gov/apod/image/2105/m104apodsub.jpg",
-            media_type: "image",
-            service_version: "v1",
-            title: "M104: The Sombrero Galaxy",
-            url: "https://apod.nasa.gov/apod/image/2105/m104apodsub800c.jpg"
-            });
-        updateDOM('favorites');
+        loader.classList.remove('hidden');
+        const response = await fetch(apiUrl);
+        resultsArray = await response.json();
+        updateDOM('results');
     } catch (error) {
         // Catch error
-        console.log(error);
     }
 }
 
@@ -109,6 +117,15 @@ function saveFavorite(itemUrl) {
             localStorage.setItem('nasaFavorites', JSON.stringify(favorites));
         }
     });
+}
+
+// Remove favorite
+function removeFavorite(itemUrl) {
+    if (favorites[itemUrl]) {
+        delete favorites[itemUrl];
+        localStorage.setItem('nasaFavorites', JSON.stringify(favorites));
+    }
+    updateDOM('favorites');
 }
 
 // On load
